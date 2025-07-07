@@ -1,3 +1,5 @@
+#![no_std]
+
 use embedded_hal::{
     delay::DelayNs,
     i2c::{I2c, SevenBitAddress},
@@ -12,14 +14,16 @@ pub mod power;
 pub mod tap;
 
 /// All possible errors in this crate
-#[derive(Debug, defmt::Format)]
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<E> {
     I2c(E),
     InvalidChipId(u8),
     InvalidMode,
 }
 
-#[derive(Debug, defmt::Format)]
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct BMX160<I> {
     i2c: I,
 }

@@ -1,59 +1,61 @@
 use super::accel::AccelRange;
-use super::{defs, Error, BMX160};
+use super::{BMX160, Error, defs};
 use embedded_hal::i2c::{I2c, SevenBitAddress};
 
 impl<I, E> BMX160<I>
 where
-  I: I2c<SevenBitAddress, Error = E>,
+    I: I2c<SevenBitAddress, Error = E>,
 {
-  pub fn set_tap_interrupt_conf(&mut self, conf: TapIntConf) -> Result<(), Error<E>> {
-    let mut data: [u8; 2] = [0; 2];
+    pub fn set_tap_interrupt_conf(&mut self, conf: TapIntConf) -> Result<(), Error<E>> {
+        let mut data: [u8; 2] = [0; 2];
 
-    // Read the current INT_TAP register values
-    self
-      .read_bytes(defs::BMI160_INT_TAP_ADDR, &mut data)
-      .map_err(Error::I2c)?;
+        // Read the current INT_TAP register values
+        self.read_bytes(defs::BMI160_INT_TAP_ADDR, &mut data)
+            .map_err(Error::I2c)?;
 
-    // Configure INT_TAP[0] - Quiet, Shock, Duration
-    data[0] = (data[0] & 0b0000_1111)               // Preserve lower 4 bits (tap duration)
+        // Configure INT_TAP[0] - Quiet, Shock, Duration
+        data[0] = (data[0] & 0b0000_1111)               // Preserve lower 4 bits (tap duration)
       | ((conf.quiet as u8) << 7)               // Set quiet (Bit 7)
       | ((conf.shock as u8) << 6)               // Set shock (Bit 6)
       | ((conf.duration as u8) & 0b111); // Set tap duration (Bits 0-2)
 
-    // Configure INT_TAP[1] - Threshold
-    data[1] = conf.threshold as u8 & 0x0F; // Set threshold (Bits 0-3)
+        // Configure INT_TAP[1] - Threshold
+        data[1] = conf.threshold as u8 & 0x0F; // Set threshold (Bits 0-3)
 
-    self.write_bytes(defs::BMI160_INT_TAP_ADDR, &data)?;
+        self.write_bytes(defs::BMI160_INT_TAP_ADDR, &data)?;
 
-    Ok(())
-  }
+        Ok(())
+    }
 }
 
 /// Quiet duration for tap detection.
-#[derive(Debug, Clone, Copy, defmt::Format, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TapQuiet {
-  Ms30 = 0,
-  Ms20 = 1,
+    Ms30 = 0,
+    Ms20 = 1,
 }
 
 /// Shock duration for tap detection.
-#[derive(Debug, Clone, Copy, defmt::Format, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TapShock {
-  Ms50 = 0,
-  Ms75 = 1,
+    Ms50 = 0,
+    Ms75 = 1,
 }
 
 /// Tap duration for double-tap detection.
-#[derive(Debug, Clone, Copy, defmt::Format, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TapDuration {
-  Ms50 = 0b000,
-  Ms100 = 0b001,
-  Ms150 = 0b010,
-  Ms200 = 0b011,
-  Ms250 = 0b100,
-  Ms375 = 0b101,
-  Ms500 = 0b110,
-  Ms700 = 0b111,
+    Ms50 = 0b000,
+    Ms100 = 0b001,
+    Ms150 = 0b010,
+    Ms200 = 0b011,
+    Ms250 = 0b100,
+    Ms375 = 0b101,
+    Ms500 = 0b110,
+    Ms700 = 0b111,
 }
 
 /// Represents the configurable tap threshold levels for the BMX160 sensor.
@@ -101,64 +103,66 @@ pub enum TapDuration {
 /// - Gesture-based controls
 /// - Impact detection
 ///
-#[derive(Debug, Clone, Copy, defmt::Format, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TapThreshold {
-  Lvl0 = 0b0000,
-  Lvl1 = 0b0001,
-  Lvl2 = 0b0010,
-  Lvl3 = 0b0011,
-  Lvl4 = 0b0100,
-  Lvl5 = 0b0101,
-  Lvl6 = 0b0110,
-  Lvl7 = 0b0111,
-  Lvl8 = 0b1000,
-  Lvl9 = 0b1001,
-  Lvl10 = 0b1010,
-  Lvl11 = 0b1011,
-  Lvl12 = 0b1100,
-  Lvl13 = 0b1101,
-  Lvl14 = 0b1110,
-  Lvl15 = 0b1111,
+    Lvl0 = 0b0000,
+    Lvl1 = 0b0001,
+    Lvl2 = 0b0010,
+    Lvl3 = 0b0011,
+    Lvl4 = 0b0100,
+    Lvl5 = 0b0101,
+    Lvl6 = 0b0110,
+    Lvl7 = 0b0111,
+    Lvl8 = 0b1000,
+    Lvl9 = 0b1001,
+    Lvl10 = 0b1010,
+    Lvl11 = 0b1011,
+    Lvl12 = 0b1100,
+    Lvl13 = 0b1101,
+    Lvl14 = 0b1110,
+    Lvl15 = 0b1111,
 }
 
 impl TapThreshold {
-  /// Calculates the tap threshold in mg based on the selected accelerometer range.
-  ///
-  /// This method applies the tap threshold multiplier to the appropriate scaling factor
-  /// depending on the provided `TapRange`.
-  ///
-  /// - `range` – The selected accelerometer range (±2g, ±4g, ±8g, or ±16g).
-  /// - Returns the calculated threshold in mg (milligrams).
-  ///
-  /// ## Example:
-  /// ```rust
-  /// let threshold = TapThreshold::Level5;
-  /// let mg = threshold.to_mg(TapRange::G8);  // 1250 mg for 8g range
-  /// println!("Threshold: {} mg", mg);
-  /// ```
-  pub fn to_mg(&self, range: AccelRange) -> f32 {
-    let scaling_factor = match range {
-      AccelRange::G2 => 62.5,
-      AccelRange::G4 => 125.0,
-      AccelRange::G8 => 250.0,
-      AccelRange::G16 => 500.0,
-    };
+    /// Calculates the tap threshold in mg based on the selected accelerometer range.
+    ///
+    /// This method applies the tap threshold multiplier to the appropriate scaling factor
+    /// depending on the provided `TapRange`.
+    ///
+    /// - `range` – The selected accelerometer range (±2g, ±4g, ±8g, or ±16g).
+    /// - Returns the calculated threshold in mg (milligrams).
+    ///
+    /// ## Example:
+    /// ```rust
+    /// let threshold = TapThreshold::Level5;
+    /// let mg = threshold.to_mg(TapRange::G8);  // 1250 mg for 8g range
+    /// println!("Threshold: {} mg", mg);
+    /// ```
+    pub fn to_mg(&self, range: AccelRange) -> f32 {
+        let scaling_factor = match range {
+            AccelRange::G2 => 62.5,
+            AccelRange::G4 => 125.0,
+            AccelRange::G8 => 250.0,
+            AccelRange::G16 => 500.0,
+        };
 
-    // Apply 0.5 multiplier for Level0
-    let multiplier = if *self == TapThreshold::Lvl0 {
-      0.5
-    } else {
-      *self as u8 as f32
-    };
+        // Apply 0.5 multiplier for Level0
+        let multiplier = if *self == TapThreshold::Lvl0 {
+            0.5
+        } else {
+            *self as u8 as f32
+        };
 
-    multiplier * scaling_factor
-  }
+        multiplier * scaling_factor
+    }
 }
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct TapIntConf {
-  pub quiet: TapQuiet,
-  pub shock: TapShock,
-  pub duration: TapDuration,
-  pub threshold: TapThreshold,
+    pub quiet: TapQuiet,
+    pub shock: TapShock,
+    pub duration: TapDuration,
+    pub threshold: TapThreshold,
 }

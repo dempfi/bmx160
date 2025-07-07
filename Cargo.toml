@@ -1,9 +1,19 @@
 [package]
-  edition = "2024"
-  name    = "bmx160"
-  version = "0.1.0"
+  authors     = ["Ike Kurghinyan <info@dempfi.com>"]
+  categories  = ["embedded", "no-std"]
+  description = "A Rust driver for the Bosch BMX160 IMU sensor"
+  edition     = "2024"
+  keywords    = ["bosch", "no_std", "bmx160"]
+  license     = "MIT OR Apache-2.0"
+  name        = "bmx160"
+  readme      = "README.md"
+  repository  = "https://github.com/dempfi/bmx160"
+  version     = "0.1.0"
 
 [dependencies]
-  defmt        = "1.0.1"
+  defmt        = { version = "1.0.1", optional = true }
   embedded-hal = "1.0.0"
   micromath    = { version = "2.1.0", features = ["vector"] }
+
+[features]
+  defmt = ["dep:defmt"]
